@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Zen+Kaku+Gothic+New:wght@300;400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
 :root {
@@ -363,18 +365,7 @@ footer .f-kanji{font-family:'Zen Kaku Gothic New',sans-serif;font-size:13px;lett
   <!-- KYOTO MAP -->
 
   <div class="kyoto-map-wrap">
-  <div id="kyoto-map" style="position:relative;background:#e8e2d8;overflow:hidden;height:480px;">
-    <iframe
-      title="Kyoto Wedding Locations"
-      width="100%"
-      height="100%"
-      style="border:0;display:block;"
-      loading="lazy"
-      allowfullscreen
-      referrerpolicy="no-referrer-when-downgrade"
-      src="https://www.google.com/maps/embed?pb=!1m46!1m8!1m3!1d13119.2!2d135.762!3d35.002!3m2!1i1024!2i768!4f13.1!4m35!3e2!4m5!1s0x6001097c4fbf9455%3A0xf3acd7f9b48c8451!2sK%C5%8Dun-ji%2C%2059%20Nanzenji%20Kitanob%C5%8Dch%C5%8D%2C%20Sakyo%20Ward%2C%20Kyoto%2C%20606-8446!3m2!1d35.0116!2d135.7878!4m5!1s0x600108b5be8b5a57%3A0x9e16fb2b78f4e6c5!2s215%20Iwatakicho%2C%20Shimogyo%20Ward%2C%20Kyoto%2C%20600-8115!3m2!1d35.0035!2d135.7530!4m5!1s0x600108b0e2c6e6e5%3A0x5a5a5a5a5a5a5a5a!2sHotel%20LiveMax%20Kyoto%2C%20161%20Hayaocho%2C%20Shimogyo%20Ward%2C%20Kyoto%2C%20600-8114!3m2!1d35.0014!2d135.7541!4m5!1s0x600108aeabc12345%3A0x1234567890abcdef!2sHotel%20Tou%20Nishinotoin%20Kyoto%2C%20Nishinotoincho%20455%2C%20Shimogyo%20Ward%2C%20Kyoto!3m2!1d34.9987!2d135.7543!4m5!1s0x60010884b2d3a5c7%3A0x7f8f9a0b1c2d3e4f!2sPontocho%20Shabu-shabu%20Sukiyaki%20Kiraku%2C%20169-2%20Kashiwayacho%2C%20Nakagyo%20Ward%2C%20Kyoto%2C%20604-8014!3m2!1d35.0060!2d135.7690!5e0!3m2!1sen!2sus!4v1710000000000!5m2!1sen!2sus">
-    </iframe>
-  </div>
+  <div id="kyoto-map" style="height:480px;width:100%;"></div>
     <div class="map-legend">
       <div class="legend-item"><div class="legend-dot" style="background:#a83228;"></div>⛩ Kounji Temple (Ceremony)</div>
       <div class="legend-item"><div class="legend-dot" style="background:#c9973a;"></div>🏡 Tyler &amp; Jacob — Airbnb</div>
@@ -754,6 +745,83 @@ function goTo(id) {
   if(el) window.scrollTo({ top: el.offsetTop - 58, behavior: 'smooth' });
 }
 
+// ── Kyoto Map ──
+(function() {
+  function initKyotoMap() {
+    const el = document.getElementById('kyoto-map');
+    if (!el || !window.L) return;
+
+    const map = L.map('kyoto-map', { scrollWheelZoom: false });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    function pin(color) {
+      return L.divIcon({
+        className: '',
+        html: `<div style="
+          width: 20px; height: 20px; border-radius: 50%;
+          background: ${color};
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        "></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -14]
+      });
+    }
+
+    const locations = [
+      {
+        lat: 35.0116, lng: 135.7878, color: '#a83228',
+        title: '⛩ Kounji Temple',
+        desc: 'Ceremony · 59 Nanzenji Kitanobocho, Sakyo Ward'
+      },
+      {
+        lat: 35.0035, lng: 135.7530, color: '#c9973a',
+        title: '🏡 Tyler & Jacob — Airbnb',
+        desc: 'Getting ready & Uber departs · 215 Iwatakicho, Shimogyo Ward'
+      },
+      {
+        lat: 34.9987, lng: 135.7543, color: '#6b8068',
+        title: '🏨 Jason & Salem — Hotel Tou',
+        desc: 'Nishinotoincho 455, Shimogyo Ward'
+      },
+      {
+        lat: 35.0014, lng: 135.7541, color: '#d4956a',
+        title: '🏨 Izie — Hotel LiveMax',
+        desc: '161 Hayaocho, Shimogyo Ward'
+      },
+      {
+        lat: 35.0060, lng: 135.7690, color: '#7a5c8a',
+        title: '🍲 Pontocho Kiraku',
+        desc: 'Celebration Dinner · 169-2 Kashiwayacho, Nakagyo Ward'
+      }
+    ];
+
+    const bounds = [];
+    locations.forEach(loc => {
+      const marker = L.marker([loc.lat, loc.lng], { icon: pin(loc.color) }).addTo(map);
+      marker.bindPopup(`
+        <div style="font-family:'Jost',sans-serif; padding:4px 2px; min-width:200px;">
+          <strong style="font-size:14px; color:#111; display:block; margin-bottom:4px;">${loc.title}</strong>
+          <span style="font-size:12px; color:#555; line-height:1.5;">${loc.desc}</span>
+        </div>
+      `, { maxWidth: 260 });
+      bounds.push([loc.lat, loc.lng]);
+    });
+
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initKyotoMap);
+  } else {
+    initKyotoMap();
+  }
+})();
 
 </script>
 
